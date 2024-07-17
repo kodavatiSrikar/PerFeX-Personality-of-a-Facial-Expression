@@ -24,5 +24,5 @@ A step-by-step series of examples that tell you how to get a development environ
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your_username/your_project.git
-   cd your_project
+   git clone https://github.com/your_username/your_project.git](https://github.com/kodavatiSrikar/Dataset-for-facial-expression-of-personality.git
+   cd Dataset-for-facial-expression-of-personality
