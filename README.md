@@ -26,3 +26,11 @@ A step-by-step series of examples that tell you how to get a development environ
    ```bash
    git clone https://github.com/your_username/your_project.git](https://github.com/kodavatiSrikar/Dataset-for-facial-expression-of-personality.git
    cd Dataset-for-facial-expression-of-personality
+   ```
+## Installation
+
+Use the package manager [pip](https://pip.pypa.io/en/stable/) to install foobar.
+
+```bash
+pip install foobar
+```
