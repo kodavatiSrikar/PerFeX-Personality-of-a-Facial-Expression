@@ -3,7 +3,7 @@
 
 ## Overview
 
-Briefly describe the purpose of the project and what the dataset is used for.
+This work presents a large-scale standardized dataset of facial expressions in terms of action units. The personality traits detected are interpreted from the action units.
 
 ## Getting Started
 
@@ -48,20 +48,63 @@ Follow the below sections to train and run the inference of the models.
 
 ## [Note]
 
-Inference of the model can be executed without training the model. The pre-trained weights for both models are provided in the google drive.
+Inference of the model can be executed without training the model. The pre-trained weights for both models are provided in Google Drive.
 
 
 ## Multi-scale CNN
 
 ## Training
 
-Run the following in the project directory to train the model
+Run the following in the project directory to train the CNN model
 
 ```bash
 python 1dcnn_train.py
 ```
 
+## Testing
 
+Run the following in the project directory to test the CNN model performance.
 
+```bash
+python 1dcnn_test.py
+```
+
+## Deployment
+
+Run the following in the project directory to generate the personality traits data using the CNN model.
+
+```bash
+python 1dcnn_deploy.py
+```
+
+## Hybrid Model
+
+## Training
+
+Run the following in the project directory to train the hybrid model
+
+```bash
+python attn_train.py
+```
+
+## Testing
+
+Run the following in the project directory to test the hybrid model performance.
+
+```bash
+python attn_test.py
+```
+
+## Deployment
+
+Run the following in the project directory to generate the personality traits data using a hybrid model.
+
+```bash
+python attn_deploy.py
+```
+
+## Custom action units
+
+Action units can be extracted from custom videos using the OpenFace library. Please use the following [Documention](https://github.com/TadasBaltrusaitis/OpenFace/wiki) to obtain the action units used as input to our model.
 
 
