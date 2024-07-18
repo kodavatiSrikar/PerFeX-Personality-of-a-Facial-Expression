@@ -257,7 +257,7 @@ def build_dataloader(dataset, batch_size, train_ratio=0.8, shuffle=True):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Create dataset and data loader
-train_dataset = FaceDataset('updated_augmented.csv')
+train_dataset = FaceDataset('data_range.csv')
 train_loader, test_loader = build_dataloader(train_dataset, batch_size=1, shuffle=True)
 
 # Initialize the model, optimizer, and criterion
