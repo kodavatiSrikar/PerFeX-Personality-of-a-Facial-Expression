@@ -13,7 +13,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 What things you need to install and how to install them:
 
-- Python 3.6+
+- Python 3.8+
 
 ### Installing
 
@@ -40,7 +40,7 @@ To download the necessary files from Google Drive, follow these steps:
 
 1. Copy the file's sharing link from Google Drive.
    [Dataset](https://drive.google.com/drive/folders/1n9G8FeW_8PeC4JbNj_1vFRuOEVretTGw?usp=drive_link)
-2. Download the folder, unzip the files inside, and copy the files into the project directory.
+2. Download the folder, unzip the files inside, and copy the files inside the Dataset-for-facial-expression-of-personality folder.
 
 ## Usage
 
@@ -50,6 +50,11 @@ Follow the below sections to train and run the inference of the models.
 
 Inference of the model can be executed without training the model. The pre-trained weights for both models are provided in Google Drive.
 
+## Data Augumentation
+Augment the training data
+```bash
+python data_augumentation.py
+```
 
 ## Multi-scale CNN
 
@@ -67,6 +72,13 @@ Run the following in the project directory to test the CNN model performance.
 
 ```bash
 python 1dcnn_test.py
+```
+## Retraining
+
+Retraining the CNN model with the data obtained from the user study.
+
+```bash
+python 1dcnn_retrain.py
 ```
 
 ## Deployment
@@ -94,7 +106,13 @@ Run the following in the project directory to test the hybrid model performance.
 ```bash
 python attn_test.py
 ```
+## Retraining
 
+Retraining the hybrid model with the data obtained from the user study.
+
+```bash
+python attn_retrain.py
+```
 ## Deployment
 
 Run the following in the project directory to generate the personality traits data using a hybrid model.
