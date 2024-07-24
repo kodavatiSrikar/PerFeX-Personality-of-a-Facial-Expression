@@ -79,22 +79,21 @@ class PersonalityPredictionModel(nn.Module):
 class FaceDataset(Dataset):
     def __init__(self, au_file, max_length=700):
         self.au_data = pd.read_csv(au_file)
-        print(self.au_data['neuroticism'])
         self.max_length = max_length
-        dataset_complete = self.au_data.drop(['Word','vi_1','vi_2','vi_3','vi_4','vi_5'], axis=1)
-        x = max(dataset_complete['ID'])
-        y = min(dataset_complete['ID'])
-        print(y,x)
+        # dataset_complete = self.au_data.drop(['Word','vi_1','vi_2','vi_3','vi_4','vi_5'], axis=1)
+        x = max(self.au_data['ID'])
+        y = min(self.au_data['ID'])
+        print(x)
         data_dict = {}
         new_name_list = []
         for i in range(y, x+1):
-            dataset = dataset_complete[dataset_complete['ID'] == i]
+            dataset = self.au_data[self.au_data['ID'] == i]
             if (len(dataset) < self.max_length) and (len(dataset) > 40):
                 key = dataset['File'].iloc[0]
                 key = key.replace('.mp4', '')
                 dataset_temp = dataset[dataset.columns.drop(list(dataset.filter(regex='_')))]
                 dataset1 = dataset.drop(['ID', 'File'], axis=1)
-                dataset_out = dataset_temp.drop(['ID', 'File','Happy','Angry','Surprise','Sad','Fear'], axis=1)
+                dataset_out = dataset_temp.drop(['ID', 'File'], axis=1)
                 dataset_au = dataset1.filter(regex='_r', axis=1)
                 values_out = dataset_out.iloc[0].values
                 values_au = dataset_au.values
@@ -120,12 +119,19 @@ class FaceDataset(Dataset):
             D = au.shape[1]
             padding_zeros = np.zeros((padding_len, D))
             au = np.concatenate((au, padding_zeros), axis=0)
-            
+            # print(au)
+            # print(personality)
         return torch.tensor(au).float(), torch.tensor(length).int(), torch.tensor(personality, dtype=torch.float32)
 
+# def build_dataloader(dataset, batch_size, shuffle=True):
+#     data_loader = DataLoader(
+#         dataset,
+#         batch_size=batch_size,
+#         shuffle=shuffle,
+#     )
+#     return data_loader
 
-
-def build_dataloader(dataset, batch_size, train_ratio=0.8, shuffle=False):
+def build_dataloader(dataset, batch_size, train_ratio=1, shuffle=False):
     # Calculate the number of training and test samples
     train_size = int(train_ratio * len(dataset))
     test_size = len(dataset) - train_size
@@ -140,13 +146,14 @@ def build_dataloader(dataset, batch_size, train_ratio=0.8, shuffle=False):
     return train_loader, test_loader
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+# device = torch.device("cpu")
 # Create dataset and data loader
-train_dataset = FaceDataset('data_augumented.csv')
+train_dataset = FaceDataset('retrain_final.csv')
 train_loader, test_loader = build_dataloader(train_dataset, batch_size=1, shuffle=True)
 
 # Initialize the model, optimizer, and criterion
 model = PersonalityPredictionModel(au_dim=17, max_seq_length=700).to(device)
+model.load_state_dict(torch.load("cnn_145.pt"))
 optimizer = optim.Adam(model.parameters(), lr=0.0001)
 criterion = nn.CrossEntropyLoss()
 
@@ -155,7 +162,7 @@ criterion = nn.CrossEntropyLoss()
 
 # Training loop for each video
 # Training loop
-num_epochs = 200
+num_epochs = 100
 print_interval = 1000
 save_interval = 5
 
@@ -170,7 +177,8 @@ for epoch in range(num_epochs):
         torch.cuda.synchronize()
         output = model(action_units, lengths, timesteps)
         torch.cuda.synchronize()
-        
+        # print(output1,personalities)
+        # print(torch.tensor([int(personalities[0][0]*4)]))
         
         loss1 = criterion(output[:, 0:5], torch.tensor([int(personalities[0][0]*4)]).to(device))
         loss2 = criterion(output[:, 5:10], torch.tensor([int(personalities[0][1]*4)]).to(device))
@@ -206,7 +214,8 @@ for epoch in range(num_epochs):
 
     
 
-                
+                # predictions = torch.tensor([[output1.argmax(dim=1)/4,output2.argmax(dim=1)/4,output3.argmax(dim=1)/4,output4.argmax(dim=1)/4,output5.argmax(dim=1)/4]]).to(device)
+                # print(y_pred1/4,personalities[0][0])
                 correct1 += (y_pred1/4 == personalities[0][0].item())
                 correct2 += (y_pred2/4 == personalities[0][1].item())
                 correct3 += (y_pred3/4 == personalities[0][2].item())
@@ -217,32 +226,7 @@ for epoch in range(num_epochs):
             print(accuracy,correct2 / total,correct3 / total,correct4 / total,correct5 / total, '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
             
 
-            correct1 = 0
-            correct2 = 0
-            correct3 = 0
-            correct4 = 0
-            correct5 = 0
-            total = 0
-            for action_units, lengths, personalities in test_loader:
-                action_units, lengths, personalities = action_units.to(device), lengths.to(device), personalities.to(device)
-                output = model(action_units, lengths, timesteps)
-                y_pred1 = torch.softmax(output[:, 0:5], dim=1).argmax(dim=1)
-                y_pred2 = torch.softmax(output[:, 5:10], dim=1).argmax(dim=1)
-                y_pred3 = torch.softmax(output[:, 10:15], dim=1).argmax(dim=1)
-                y_pred4 = torch.softmax(output[:, 15:20], dim=1).argmax(dim=1)
-                y_pred5 = torch.softmax(output[:, 20:25], dim=1).argmax(dim=1)
-
-    
-
-                
-                correct1 += (y_pred1/4 == personalities[0][0].item())
-                correct2 += (y_pred2/4 == personalities[0][1].item())
-                correct3 += (y_pred3/4 == personalities[0][2].item())
-                correct4 += (y_pred4/4 == personalities[0][3].item())
-                correct5 += (y_pred5/4 == personalities[0][4].item())
-                total += personalities.size(0)
-            accuracy = correct1 / total
-            print(accuracy,correct2 / total,correct3 / total,correct4 / total,correct5 / total, '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
-        # Save model
-        torch.save(model.state_dict(), f"cnn_{epoch}.pt")
+                  # Save model
+        print(epoch+150)
+        torch.save(model.state_dict(), f"cnn_{epoch+150}.pt")
 

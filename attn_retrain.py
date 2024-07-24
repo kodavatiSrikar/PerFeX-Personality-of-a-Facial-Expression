@@ -7,9 +7,6 @@ import numpy as np
 import math
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, random_split
-from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score, roc_curve, auc
-import matplotlib.pyplot as plt
-from sklearn.preprocessing import label_binarize
 
 def create_timesteps(num_timesteps, scale=1.0):
     """
@@ -130,21 +127,23 @@ class PersonalityPredictionModel(nn.Module):
         self.conv1d_y2 = nn.Conv1d(128, 256, 5, padding=2)
         self.bn2 = nn.BatchNorm1d(256)
         self.conv1d_y3 = nn.Conv1d(256, 256, 3, padding=1)
-        
+        # self.bn3 = nn.BatchNorm1d(128)
+
         self.conv1d_y4 = nn.Conv1d(256, 256, 3, padding=1)
-        
+        # self.bn4 = nn.BatchNorm1d(256)
+
         self.squeeze_excite1 = SqueezeExciteBlock(128)
         self.squeeze_excite2 = SqueezeExciteBlock(256)
         self.squeeze_excite3 = SqueezeExciteBlock(256)
         self.squeeze_excite4 = SqueezeExciteBlock(256)
 
         self.global_avg_pooling = nn.AdaptiveAvgPool1d(1)
-        
+        # self.fc = nn.Linear(512, nb_classes*5)
         self.linear_layer_stack = nn.Sequential(
             nn.Linear(in_features=512, out_features=256),
-            
+            # nn.ReLU(), # <- does our dataset require non-linear layers? (try uncommenting and see if the results change)
             nn.Linear(in_features=256, out_features=128),
-            
+            # nn.ReLU(), # <- does our dataset require non-linear layers? (try uncommenting and see if the results change)
             nn.Linear(in_features=128, out_features=nb_classes), # how many classes are there?
         )
 
@@ -188,7 +187,7 @@ class PersonalityPredictionModel(nn.Module):
         y = self.global_avg_pooling(y)
 
         # Reshape y to match the number of features in x before concatenation
-        
+        # print(x.squeeze(-1).shape, y.squeeze(-1).shape)
         x = torch.cat((x.squeeze(-1), y.squeeze(-1)), dim=1)
         x = self.linear_layer_stack(x.squeeze(-1))
         return x
@@ -200,19 +199,20 @@ class FaceDataset(Dataset):
     def __init__(self, au_file, max_length=700):
         self.au_data = pd.read_csv(au_file)
         self.max_length = max_length
-        dataset_complete = self.au_data.drop(['Word','vi_1','vi_2','vi_3','vi_4','vi_5'], axis=1)
-        x = max(dataset_complete['ID'])
-        y = min(dataset_complete['ID'])
+        # dataset_complete = self.au_data.drop(['Word','vi_1','vi_2','vi_3','vi_4','vi_5'], axis=1)
+        x = max(self.au_data['ID'])
+        y = min(self.au_data['ID'])
+        print(x)
         data_dict = {}
         new_name_list = []
         for i in range(y, x+1):
-            dataset = dataset_complete[dataset_complete['ID'] == i]
+            dataset = self.au_data[self.au_data['ID'] == i]
             if (len(dataset) < self.max_length) and (len(dataset) > 40):
                 key = dataset['File'].iloc[0]
                 key = key.replace('.mp4', '')
                 dataset_temp = dataset[dataset.columns.drop(list(dataset.filter(regex='_')))]
                 dataset1 = dataset.drop(['ID', 'File'], axis=1)
-                dataset_out = dataset_temp.drop(['ID', 'File','Happy','Angry','Surprise','Sad','Fear'], axis=1)
+                dataset_out = dataset_temp.drop(['ID', 'File'], axis=1)
                 dataset_au = dataset1.filter(regex='_r', axis=1)
                 values_out = dataset_out.iloc[0].values
                 values_au = dataset_au.values
@@ -240,70 +240,121 @@ class FaceDataset(Dataset):
             au = np.concatenate((au, padding_zeros), axis=0)
         return torch.tensor(au).float(), torch.tensor(length).int(), torch.tensor(personality).float()
 
+# def build_dataloader(dataset, batch_size, shuffle=True):
+#     data_loader = DataLoader(
+#         dataset,
+#         batch_size=batch_size,
+#         shuffle=shuffle,
+#     )
+#     return data_loader
 
+def build_dataloader(dataset, batch_size, train_ratio=1, shuffle=True):
+    # Calculate the number of training and test samples
+    train_size = int(train_ratio * len(dataset))
+    test_size = len(dataset) - train_size
 
+    # Split the dataset into training and test sets
+    train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+
+    # Create DataLoader for training and test sets
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    return train_loader, test_loader
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model = PersonalityPredictionModel(au_dim=17, lstm_hidden_size=128, max_seq_length=700).to(device)
-model.load_state_dict(torch.load('attn_145.pt'))  # replace with your checkpoint file
-model.eval()
-
 # Create dataset and data loader
-test_dataset = FaceDataset('data_augumented.csv')  # replace with your test dataset file
-test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+train_dataset = FaceDataset('retrain_final.csv')
+train_loader, test_loader = build_dataloader(train_dataset, batch_size=1, shuffle=True)
 
-# Perform prediction
-with torch.no_grad():
-    y_true = [[] for _ in range(5)]
-    y_pred = [[] for _ in range(5)]
-    y_probs = [[] for _ in range(5)]
-    for action_units, lengths, personalities in test_loader:
+# Initialize the model, optimizer, and criterion
+model = PersonalityPredictionModel(au_dim=17, lstm_hidden_size=128, max_seq_length=700).to(device)
+model.load_state_dict(torch.load("attn_145.pt"))
+optimizer = optim.Adam(model.parameters(), lr=0.0001)
+criterion = nn.CrossEntropyLoss()
+
+
+
+
+# Training loop for each video
+# Training loop
+num_epochs = 100
+print_interval = 1000
+save_interval = 5
+
+for epoch in range(num_epochs):
+    model.train()
+    for batch_idx, (action_units, lengths, personalities) in enumerate(train_loader):
         action_units, lengths, personalities = action_units.to(device), lengths.to(device), personalities.to(device)
         num_timesteps = 700
         scale = 100/30
         timesteps = create_timesteps(num_timesteps, scale).to(device)
+        optimizer.zero_grad()
         output = model(action_units, lengths, timesteps)
-        y_prob1=torch.softmax(output[:, 0:5], dim=1)
-        y_pred1 = y_prob1.argmax(dim=1)
-        y_probs[0].append(y_prob1.cpu().numpy())
-        y_pred[0].append(y_pred1.cpu().numpy())
-        y_true[0].append((personalities[0][0] * 4).long().cpu().numpy())
-        y_prob2= torch.softmax(output[:, 5:10], dim=1)
-        y_pred2 = y_prob2.argmax(dim=1)
-        y_probs[1].append(y_prob2.cpu().numpy())
-        y_pred[1].append(y_pred2.cpu().numpy())
-        y_true[1].append((personalities[0][1] * 4).long().cpu().numpy())
-        y_prob3 = torch.softmax(output[:, 10:15], dim=1)
-        y_pred3 = y_prob3.argmax(dim=1)
-        y_probs[2].append(y_prob3.cpu().numpy())
-        y_pred[2].append(y_pred3.cpu().numpy())
-        y_true[2].append((personalities[0][2] * 4).long().cpu().numpy())
-        y_prob4 = torch.softmax(output[:, 15:20], dim=1)
-        y_pred4 = y_prob4.argmax(dim=1)
-        y_probs[3].append(y_prob4.cpu().numpy())
-        y_pred[3].append(y_pred4.cpu().numpy())
-        y_true[3].append((personalities[0][3] * 4).long().cpu().numpy())
-        y_prob5 = torch.softmax(output[:, 20:25], dim=1)
-        y_pred5 = y_prob5.argmax(dim=1)
-        y_probs[4].append(y_prob5.cpu().numpy())
-        y_pred[4].append(y_pred5.cpu().numpy())
-        y_true[4].append((personalities[0][4] * 4).long().cpu().numpy())
+        # print(output1,personalities)
+        # print(torch.tensor([int(personalities[0][0]*4)]))
+        
+        loss1 = criterion(output[:, 0:5], torch.tensor([int(personalities[0][0]*4)]).to(device))
+        loss2 = criterion(output[:, 5:10], torch.tensor([int(personalities[0][1]*4)]).to(device))
+        loss3 = criterion(output[:, 10:15], torch.tensor([int(personalities[0][2]*4)]).to(device))
+        loss4 = criterion(output[:, 15:20], torch.tensor([int(personalities[0][3]*4)]).to(device))
+        loss5 = criterion(output[:, 20:25], torch.tensor([int(personalities[0][4]*4)]).to(device))
 
+        # Sum up the losses
+        # total_loss = loss1+loss2+loss3+loss4+loss5
+        # total_loss.backward()
+        # optimizer.step()
 
-y_pred = [np.concatenate(trait) for trait in y_pred]
-y_probs = [np.concatenate(trait, axis=0) for trait in y_probs]
+        # Perform backward pass for each loss separately
+        loss5.backward(retain_graph=True)
+        loss4.backward(retain_graph=True)
+        loss3.backward(retain_graph=True)
+        loss2.backward(retain_graph=True)
+        loss1.backward()
 
-for i in range(5):
-    y_true_binarized = label_binarize(y_true[i], classes=[0, 1, 2, 3, 4])
-    accuracy = accuracy_score(y_true[i], y_pred[i])
-    precision = precision_score(y_true[i], y_pred[i], average='macro')
-    recall = recall_score(y_true[i], y_pred[i], average='macro')
-    roc_auc = roc_auc_score(y_true_binarized, y_probs[i], multi_class='ovr', average='macro')
+        optimizer.step()
 
-    print(f'Trait {i+1}:')
-    print(f'  Accuracy: {accuracy:.4f}')
-    print(f'  Precision: {precision:.4f}')
-    print(f'  Recall: {recall:.4f}')
-    print(f'  ROC AUC: {roc_auc:.4f}')
+        # Sum up the losses for logging purposes
+        total_loss = loss1 + loss2 + loss3 + loss4 + loss5
+
+        if batch_idx % print_interval == 0:
+            print(f"Epoch {epoch}, Batch {batch_idx}, Loss: {total_loss.item()}")
+    
+    # Calculate MAPE every 5 epochs
+    if epoch % save_interval == 0:
+        with torch.no_grad():
+            model.eval()
+            correct1 = 0
+            correct2 = 0
+            correct3 = 0
+            correct4 = 0
+            correct5 = 0
+            total = 0
+            for action_units, lengths, personalities in train_loader:
+                action_units, lengths, personalities = action_units.to(device), lengths.to(device), personalities.to(device)
+                output = model(action_units, lengths, timesteps)
+                y_pred1 = torch.softmax(output[:, 0:5], dim=1).argmax(dim=1)
+                y_pred2 = torch.softmax(output[:, 5:10], dim=1).argmax(dim=1)
+                y_pred3 = torch.softmax(output[:, 10:15], dim=1).argmax(dim=1)
+                y_pred4 = torch.softmax(output[:, 15:20], dim=1).argmax(dim=1)
+                y_pred5 = torch.softmax(output[:, 20:25], dim=1).argmax(dim=1)
+
+    
+
+                # predictions = torch.tensor([[output1.argmax(dim=1)/4,output2.argmax(dim=1)/4,output3.argmax(dim=1)/4,output4.argmax(dim=1)/4,output5.argmax(dim=1)/4]]).to(device)
+                # print(y_pred1/4,personalities[0][0])
+                correct1 += (y_pred1/4 == personalities[0][0].item())
+                correct2 += (y_pred2/4 == personalities[0][1].item())
+                correct3 += (y_pred3/4 == personalities[0][2].item())
+                correct4 += (y_pred4/4 == personalities[0][3].item())
+                correct5 += (y_pred5/4 == personalities[0][4].item())
+                total += personalities.size(0)
+            accuracy = correct1 / total
+            print(accuracy,correct2 / total,correct3 / total,correct4 / total,correct5 / total, '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+            
+
+         # Save model
+        torch.save(model.state_dict(), f"attn_{epoch+150}.pt")
+

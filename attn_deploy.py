@@ -258,7 +258,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = PersonalityPredictionModel(au_dim=17, lstm_hidden_size=128, max_seq_length=700).to(device)
 
-model.load_state_dict(torch.load('attn_145.pt'))  # replace with your checkpoint file
+model.load_state_dict(torch.load('attn_180.pt'))  # replace with your checkpoint file
 model.eval()
 
 # Create dataset and data loader

@@ -116,7 +116,7 @@ model.load_state_dict(torch.load('cnn_145.pt'))  # replace with your checkpoint 
 model.eval()
 
 # Create dataset and data loader
-test_dataset = FaceDataset('data_range.csv')  # replace with your test dataset file
+test_dataset = FaceDataset('data_augumented.csv')  # replace with your test dataset file
 test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
 # Perform prediction
