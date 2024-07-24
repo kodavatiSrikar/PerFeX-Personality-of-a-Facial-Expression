@@ -66,19 +66,20 @@ Run the following in the project directory to train the CNN model
 python 1dcnn_train.py
 ```
 
-## Testing
-
-Run the following in the project directory to test the CNN model performance.
-
-```bash
-python 1dcnn_test.py
-```
 ## Retraining
 
 Retraining the CNN model with the data obtained from the user study.
 
 ```bash
 python 1dcnn_retrain.py
+```
+
+## Testing
+
+Run the following in the project directory to test the CNN model performance.
+
+```bash
+python 1dcnn_test.py
 ```
 
 ## Deployment
@@ -99,13 +100,7 @@ Run the following in the project directory to train the hybrid model
 python attn_train.py
 ```
 
-## Testing
 
-Run the following in the project directory to test the hybrid model performance.
-
-```bash
-python attn_test.py
-```
 ## Retraining
 
 Retraining the hybrid model with the data obtained from the user study.
@@ -113,6 +108,14 @@ Retraining the hybrid model with the data obtained from the user study.
 ```bash
 python attn_retrain.py
 ```
+## Testing
+
+Run the following in the project directory to test the hybrid model performance.
+
+```bash
+python attn_test.py
+```
+
 ## Deployment
 
 Run the following in the project directory to generate the personality traits data using a hybrid model.
