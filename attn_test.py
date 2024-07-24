@@ -130,21 +130,23 @@ class PersonalityPredictionModel(nn.Module):
         self.conv1d_y2 = nn.Conv1d(128, 256, 5, padding=2)
         self.bn2 = nn.BatchNorm1d(256)
         self.conv1d_y3 = nn.Conv1d(256, 256, 3, padding=1)
-        
+        # self.bn3 = nn.BatchNorm1d(128)
+
         self.conv1d_y4 = nn.Conv1d(256, 256, 3, padding=1)
-        
+        # self.bn4 = nn.BatchNorm1d(256)
+
         self.squeeze_excite1 = SqueezeExciteBlock(128)
         self.squeeze_excite2 = SqueezeExciteBlock(256)
         self.squeeze_excite3 = SqueezeExciteBlock(256)
         self.squeeze_excite4 = SqueezeExciteBlock(256)
 
         self.global_avg_pooling = nn.AdaptiveAvgPool1d(1)
-        
+        # self.fc = nn.Linear(512, nb_classes*5)
         self.linear_layer_stack = nn.Sequential(
             nn.Linear(in_features=512, out_features=256),
-            
+            # nn.ReLU(), # <- does our dataset require non-linear layers? (try uncommenting and see if the results change)
             nn.Linear(in_features=256, out_features=128),
-            
+            # nn.ReLU(), # <- does our dataset require non-linear layers? (try uncommenting and see if the results change)
             nn.Linear(in_features=128, out_features=nb_classes), # how many classes are there?
         )
 
@@ -188,7 +190,7 @@ class PersonalityPredictionModel(nn.Module):
         y = self.global_avg_pooling(y)
 
         # Reshape y to match the number of features in x before concatenation
-        
+        # print(x.squeeze(-1).shape, y.squeeze(-1).shape)
         x = torch.cat((x.squeeze(-1), y.squeeze(-1)), dim=1)
         x = self.linear_layer_stack(x.squeeze(-1))
         return x
@@ -240,18 +242,24 @@ class FaceDataset(Dataset):
             au = np.concatenate((au, padding_zeros), axis=0)
         return torch.tensor(au).float(), torch.tensor(length).int(), torch.tensor(personality).float()
 
-
+# def build_dataloader(dataset, batch_size, shuffle=True):
+#     data_loader = DataLoader(
+#         dataset,
+#         batch_size=batch_size,
+#         shuffle=shuffle,
+#     )
+#     return data_loader
 
 
 # Set device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = PersonalityPredictionModel(au_dim=17, lstm_hidden_size=128, max_seq_length=700).to(device)
-model.load_state_dict(torch.load('attn_145.pt'))  # replace with your checkpoint file
+model.load_state_dict(torch.load('attn_180.pt'))  # replace with your checkpoint file
 model.eval()
 
 # Create dataset and data loader
-test_dataset = FaceDataset('data_augumented.csv')  # replace with your test dataset file
+test_dataset = FaceDataset('data_range.csv')  # replace with your test dataset file
 test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
 # Perform prediction
@@ -291,7 +299,7 @@ with torch.no_grad():
         y_pred[4].append(y_pred5.cpu().numpy())
         y_true[4].append((personalities[0][4] * 4).long().cpu().numpy())
 
-
+# y_true = np.concatenate(y_true)
 y_pred = [np.concatenate(trait) for trait in y_pred]
 y_probs = [np.concatenate(trait, axis=0) for trait in y_probs]
 
@@ -307,3 +315,30 @@ for i in range(5):
     print(f'  Precision: {precision:.4f}')
     print(f'  Recall: {recall:.4f}')
     print(f'  ROC AUC: {roc_auc:.4f}')
+# Plot ROC curve
+# n_classes = 5
+# fpr = dict()
+# tpr = dict()
+# roc_auc = dict()
+# for i in range(n_classes):
+#     fpr[i], tpr[i], _ = roc_curve(y_true_binarized[:, i], y_probs[:, i])
+#     roc_auc[i] = auc(fpr[i], tpr[i])
+
+# plt.figure()
+# colors = ['aqua', 'darkorange', 'cornflowerblue', 'darkgreen', 'darkred']
+# for i, color in zip(range(n_classes), colors):
+#     plt.plot(fpr[i], tpr[i], color=color, lw=2,
+#              label='ROC curve of class {0} (area = {1:0.2f})'
+#              ''.format(i, roc_auc[i]))
+
+# plt.plot([0, 1], [0, 1], 'k--', lw=2)
+# plt.xlim([0.0, 1.0])
+# plt.ylim([0.0, 1.05])
+# plt.xlabel('False Positive Rate')
+# plt.ylabel('True Positive Rate')
+# plt.title('Receiver Operating Characteristic')
+# plt.legend(loc="lower right")
+# plt.savefig('roc_curve_attn.jpg')
+# plt.show()
+        
+   
