@@ -1,9 +1,9 @@
-# Dataset-for-facial-expression-of-personality
+# PerFeX: Personality of a Facial Expression
 
 
 ## Overview
 
-This work presents a large-scale standardized dataset of facial expressions in terms of action units. The personality traits detected are interpreted from the action units.
+This work presents a model that identifies a person's personality traits given facial action units, and a large-scale standardized dataset of facial expressions in terms of action units. The project employes an iterative approach to train two models (Hybrid Attention model and 1D-CNN model) that let them predict personality traits based on the the action units.
 
 ## Getting Started
 
