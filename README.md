@@ -3,11 +3,11 @@
 
 ## Overview
 
-This work presents a model that identifies a person's personality traits given facial action units, and a large-scale standardized dataset of facial expressions in terms of action units. The project employes an iterative approach to train two models (Hybrid Attention model and 1D-CNN model) that let them predict personality traits based on the the action units.
+This work presents a model that identifies a person's personality traits given facial action units and a large-scale standardized dataset of facial expressions in terms of action units. The project employs an iterative training approach to train two models (a Hybrid Attention model and a 1D-CNN model) that predict personality traits based on the action units.
 
 ## Getting Started
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing. The dataset can be generated using two models that are provided in the project.
+These instructions will get you a copy of the project up and running on your local machine for development and testing. The dataset can be generated using two models provided in the project.
 
 ### Prerequisites
 
