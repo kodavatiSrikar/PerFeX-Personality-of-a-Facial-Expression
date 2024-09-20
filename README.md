@@ -53,7 +53,7 @@ Inference of the model can be executed without training the model. The pre-train
 ## Data Augumentation
 Augment the training data
 ```bash
-python data_augumentation.py
+python data_augmentation.py
 ```
 
 ## Multi-scale CNN
