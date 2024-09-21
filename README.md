@@ -3,7 +3,7 @@
 
 ## Overview
 
-This work presents a model that identifies a person's personality traits given facial action units and a large-scale standardized dataset of facial expressions in terms of action units. The project employs an iterative training approach to train two models (a Hybrid Attention model and a 1D-CNN model) that predict personality traits based on the action units.
+This work presents a model that identifies a person's personality traits given facial expressions, and a large-scale standardized dataset of facial expressions in terms of Action Units. The project employs an iterative training approach to train two models (a Hybrid Attention model and a 1D-CNN model) that predict personality traits based on the Action Units.
 
 ## Getting Started
 
@@ -124,6 +124,6 @@ python attn_deploy.py
 
 ## Custom action units
 
-Action units can be extracted from custom videos using the OpenFace library. Please use the following [Documention](https://github.com/TadasBaltrusaitis/OpenFace/wiki) to obtain the action units used as input to our model.
+Action Units can be extracted from custom videos using the OpenFace library, which employs the FACS principle. Please use the following [Documention](https://github.com/TadasBaltrusaitis/OpenFace/wiki) to obtain the Action Units used to input our model.
 
 
